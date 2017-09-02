@@ -2,8 +2,6 @@
 
 
 ls -latr ~/.ssh
-test -f ~/.ssh/id_rsa && cat ~/.ssh/id_rsa
-test -f ~/.ssh/known_hosts && cat ~/.ssh/known_hosts
 
 # Setup the SSH private key for Git clone operations
 printf '%s\n' "$PRIVKEY" > ~/.ssh/id_rsa

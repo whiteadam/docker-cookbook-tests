@@ -1,6 +1,10 @@
 #!/bin/bash
 
 
+ls -latr ~/.ssh
+test -f ~/.ssh/id_rsa && cat ~/.ssh/id_rsa
+test -f ~/.ssh/known_hosts && cat ~/.ssh/known_hosts
+
 # Setup the SSH private key for Git clone operations
 printf '%s\n' "$PRIVKEY" > ~/.ssh/id_rsa
 chmod 0600 ~/.ssh/id_rsa
@@ -17,15 +21,17 @@ if [ $? -ne 0 ] ; then
   fi
 fi
 
-printf "$CB_SOURCE" | grep 'http' > /dev/null
-if [ $? -ne 0 ] ; then
-  # The source URL is not HTTP, assume SSH and grab the host/port to add the key to the known_hosts
-  SOURCE_HOST=$(printf "$CB_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);\4;g')
-  SOURCE_PORT=$(printf "$CB_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);-p \5;g')
-  if [ "$SOURCE_PORT" == "-p " ] ; then
-    ssh-keyscan -T60 $SOURCE_HOST >> ~/.ssh/known_hosts
-  else
-    ssh-keyscan -T60 $SOURCE_PORT $SOURCE_HOST >> ~/.ssh/known_hosts
+if [ -z $BUILD_DIR ] ; then
+  printf "$CB_SOURCE" | grep 'http' > /dev/null
+  if [ $? -ne 0 ] ; then
+    # The source URL is not HTTP, assume SSH and grab the host/port to add the key to the known_hosts
+    SOURCE_HOST=$(printf "$CB_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);\4;g')
+    SOURCE_PORT=$(printf "$CB_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);-p \5;g')
+    if [ "$SOURCE_PORT" == "-p " ] ; then
+      ssh-keyscan -T60 $SOURCE_HOST >> ~/.ssh/known_hosts
+    else
+      ssh-keyscan -T60 $SOURCE_PORT $SOURCE_HOST >> ~/.ssh/known_hosts
+    fi
   fi
 fi
 
@@ -36,12 +42,17 @@ if [ ! -z $CR_BRANCH ] ; then
 fi
 git archive --remote="${CR_SOURCE}" "$BR" | tar -xf -
 
-cd /chef/cookbook
-BR='master'
-if [ ! -z $CB_BRANCH ] ; then
-  BR="$CB_BRANCH"
+if [ -z $BUILD_DIR ] ; then
+  cd /chef/cookbook
+  BR='master'
+  if [ ! -z $CB_BRANCH ] ; then
+    BR="$CB_BRANCH"
+  fi
+  git archive --remote="${CB_SOURCE}" "$BR" | tar -xf -
+else
+  rm -rf /chef/cookbook
+  ln -s $BUILD_DIR /chef/cookbook 
 fi
-git archive --remote="${CB_SOURCE}" "$BR" | tar -xf -
 
 printf 'Running RuboCop...'
 rubocop

@@ -5,8 +5,29 @@
 printf '%s\n' "$PRIVKEY" > ~/.ssh/id_rsa
 chmod 0600 ~/.ssh/id_rsa
 
-SOURCE_HOST=$(printf "$CB_SOURCE" | sed 's;\(https\|ssh\)://\(.*@\)*\([A-Za-z_\.0-9-]*\)/.*;\3;g')
-ssh-keyscan -T60 $SOURCE_HOST >> ~/.ssh/known_hosts
+printf "$CR_SOURCE" | grep 'http' > /dev/null
+if [ $? -ne 0 ] ; then
+  # The source URL is not HTTP, assume SSH and grab the host/port to add the key to the known_hosts
+  SOURCE_HOST=$(printf "$CR_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);\4;g')
+  SOURCE_PORT=$(printf "$CR_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);-p \5;g')
+  if [ "$SOURCE_PORT" == "-p " ] ; then
+    ssh-keyscan -T60 $SOURCE_HOST >> ~/.ssh/known_hosts
+  else
+    ssh-keyscan -T60 $SOURCE_PORT $SOURCE_HOST >> ~/.ssh/known_hosts
+  fi
+fi
+
+printf "$CB_SOURCE" | grep 'http' > /dev/null
+if [ $? -ne 0 ] ; then
+  # The source URL is not HTTP, assume SSH and grab the host/port to add the key to the known_hosts
+  SOURCE_HOST=$(printf "$CB_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);\4;g')
+  SOURCE_PORT=$(printf "$CB_SOURCE" | sed 's;\(\(ssh\)://\)*\(.*@\)*\([A-Za-z_\.0-9-]*\):*\([A-Za-z0-9]*\)*/\(.*\);-p \5;g')
+  if [ "$SOURCE_PORT" == "-p " ] ; then
+    ssh-keyscan -T60 $SOURCE_HOST >> ~/.ssh/known_hosts
+  else
+    ssh-keyscan -T60 $SOURCE_PORT $SOURCE_HOST >> ~/.ssh/known_hosts
+  fi
+fi
 
 cd /chef
 BR='master'

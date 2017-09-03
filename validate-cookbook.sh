@@ -20,10 +20,13 @@ BR="${CR_BRANCH:-master}"
 printf 'Checking out the chef-repo code from %s@%s\n' "$CR_SOURCE" "$BR"
 git archive --remote="${CR_SOURCE}" "$BR" | tar -xf -
 
+# Assume that if the file exists, a bind mount was used and the user is running locally.
 cd /chef/cookbook
-BR="${CB_BRANCH:-master}"
-printf 'Checking out the cookbook code from %s@%s\n' "$CB_SOURCE" "$BR"
-git archive --remote="${CB_SOURCE}" "$BR" | tar -xf -
+if [ ! -f /chef/cookbook/metadata.rb ] ; then
+  BR="${CB_BRANCH:-master}"
+  printf 'Checking out the cookbook code from %s@%s\n' "$CB_SOURCE" "$BR"
+  git archive --remote="${CB_SOURCE}" "$BR" | tar -xf -
+fi
 
 printf 'Running RuboCop...' ; rubocop ; COP_RET=$?
 printf 'Running FoodCritic...' ; foodcritic . ; FC_RET=$?
